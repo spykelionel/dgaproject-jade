@@ -28,7 +28,7 @@ public class MainContainer {
             // Launch DataLoader
             container.createNewAgent("data-loader", DataLoaderAgent.class.getName(), null).start();
 
-            System.out.println("✅ All agents launched successfully.");
+            System.out.println(" All agents launched successfully.");
         } catch (Exception e) {
             e.printStackTrace();
         }
