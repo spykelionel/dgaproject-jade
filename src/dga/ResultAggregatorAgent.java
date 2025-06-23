@@ -3,21 +3,25 @@ package dga;
 import jade.core.Agent;
 import jade.lang.acl.ACLMessage;
 import jade.core.behaviours.CyclicBehaviour;
+// import dga.ComponentWeights;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class ResultAggregatorAgent extends Agent {
     private final Map<String, Map<String, String>> results = new HashMap<>();
 
-    // Simulated temperature and load maps
+    // Mock data
     private final Map<String, Integer> tempMap = Map.of(
-            "1", 85, "2", 78, "3", 90, "4", 75, "5", 92,
-            "6", 65, "7", 70, "8", 69, "9", 100, "10", 88
+            "1", 85, "2", 78, "3", 90, "4", 75, "5", 92, "6", 65, "7", 70, "8", 69, "9", 100, "10", 88
     );
 
     private final Map<String, Integer> loadMap = Map.of(
-            "1", 420, "2", 430, "3", 480, "4", 300, "5", 450,
-            "6", 390, "7", 405, "8", 395, "9", 470, "10", 410
+            "1", 420, "2", 430, "3", 480, "4", 300, "5", 450, "6", 390, "7", 405, "8", 395, "9", 470, "10", 410
+    );
+
+    private final Map<String, Integer> humidityMap = Map.of(
+            "1", 85, "2", 90, "3", 75, "4", 68, "5", 95, "6", 72, "7", 86, "8", 88, "9", 91, "10", 92
     );
 
     private final List<Set<String>> clusters = List.of(
@@ -34,7 +38,6 @@ public class ResultAggregatorAgent extends Agent {
         addBehaviour(new CyclicBehaviour() {
             public void action() {
                 ACLMessage msg = receive();
-
                 if (msg != null && msg.getPerformative() == ACLMessage.INFORM) {
                     String[] parts = msg.getContent().split(",");
                     if (parts.length == 3) {
@@ -48,42 +51,10 @@ public class ResultAggregatorAgent extends Agent {
                             System.out.println("\nTransformer " + sampleId + ":");
                             Map<String, String> sampleResult = results.get(sampleId);
 
-                            sampleResult.forEach((m, l) ->
-                                    System.out.println("- " + m + " -> " + l));
+                            sampleResult.forEach((m, l) -> System.out.println("- " + m + " -> " + l));
 
-                            String miLabel = sampleResult.get("MI");
-                            boolean isUnmapped = miLabel.startsWith("UNMAPPED_");
-
-                            // Analyze genetic alignment
-                            boolean foundInCluster = clusters.stream().anyMatch(cluster -> cluster.contains(miLabel));
-                            String status = !isUnmapped && foundInCluster ?
-                                    "GOOD: MI aligns with genetic pattern" :
-                                    "BAD: MI NOT in genetic cluster";
-
-                            if (isUnmapped) {
-                                // Try to infer if MI *might* belong based on majority cluster
-                                List<String> otherLabels = new ArrayList<>(sampleResult.values());
-                                otherLabels.remove(miLabel); // remove MI's label
-
-                                Optional<Set<String>> bestCluster = clusters.stream()
-                                        .max(Comparator.comparingInt(cluster ->
-                                                (int) otherLabels.stream().filter(cluster::contains).count()));
-
-                                bestCluster.ifPresent(cluster -> {
-                                    long count = otherLabels.stream().filter(cluster::contains).count();
-                                    if (count >= 3) {
-                                        System.out.println("-> MI is unmapped, but other methods suggest genetic cluster: " + cluster);
-                                    }
-                                });
-                            }
-
-                            System.out.println("-> MI verdict: " + status);
-
-                            int temp = tempMap.getOrDefault(sampleId, 70);
-                            int load = loadMap.getOrDefault(sampleId, 350);
-                            boolean highStress = (temp > 80 || load > 400);
-
-                            System.out.println("-> Environmental Stress: " + (highStress ? "HIGH" : "NORMAL"));
+                            evaluateMI(sampleId, sampleResult);
+                            evaluateCost(sampleId, sampleResult);
                         }
                     }
                 } else {
@@ -91,5 +62,49 @@ public class ResultAggregatorAgent extends Agent {
                 }
             }
         });
+    }
+
+    private void evaluateMI(String sampleId, Map<String, String> sampleResult) {
+        String miLabel = sampleResult.get("MI");
+        boolean foundInCluster = clusters.stream().anyMatch(cluster -> cluster.contains(miLabel));
+        String status = foundInCluster ? "GOOD: MI aligns with genetic pattern" : "BAD: MI NOT in genetic cluster";
+
+        int temp = tempMap.getOrDefault(sampleId, 70);
+        int load = loadMap.getOrDefault(sampleId, 350);
+        int humidity = humidityMap.getOrDefault(sampleId, 50);
+        boolean highStress = (temp > 80 || load > 400 || humidity > 80);
+
+        System.out.println("-> MI verdict: " + status);
+        System.out.println("-> Environmental Stress: " + (highStress ? "HIGH" : "NORMAL"));
+    }
+
+    private void evaluateCost(String sampleId, Map<String, String> sampleResult) {
+        int budget = 20;
+        int totalCost = 0;
+        List<String> overSensitive = new ArrayList<>();
+
+        int temp = tempMap.getOrDefault(sampleId, 70);
+        int load = loadMap.getOrDefault(sampleId, 350);
+        int humidity = humidityMap.getOrDefault(sampleId, 50);
+
+        for (String label : sampleResult.values()) {
+            ComponentWeights.ComponentInfo info = ComponentWeights.weights.get(label);
+            if (info != null) {
+                totalCost += info.cost;
+                if ((temp > 80 && info.tempSensitive) ||
+                    (load > 400 && info.loadSensitive) ||
+                    (humidity > 80 && info.humiditySensitive)) {
+                    overSensitive.add(label);
+                }
+            }
+        }
+
+        System.out.println("-> Component Budget: " + totalCost + "/20 " +
+                (totalCost > budget ? "BAD: OVER BUDGET" : "GOOD: within budget"));
+
+        if (!overSensitive.isEmpty()) {
+            String list = overSensitive.stream().collect(Collectors.joining(", "));
+            System.out.println("-> CAUTION: Stress-sensitive components: " + list);
+        }
     }
 }
