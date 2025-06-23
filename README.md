@@ -94,9 +94,7 @@ Sample 2: {KGM=C1, IEC=C13, RRM=C6, DRM=C20, DTM=C26, MI=F6}
 
 **Screenshots**
 
-**Screenshots**
-
-## ![Result Aggregator Output](screenshots/screenshot.png)
+## ![Result Aggregator Output](screenshots/output.png)
 
 ## 🚀 How to Run (Windows)
 
