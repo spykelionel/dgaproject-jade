@@ -1,0 +1,35 @@
+# Compiled Java classes
+out/
+bin/
+*.class
+
+# MadKit specific
+*.jnlp
+*.log
+*.txt   
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+
+# Build tools
+target/
+build/
+.gradle/
+*.jar
+!lib/madkitkernel-5.0.0.10.jar  # Keep the MadKit library
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Data files (optional - remove if you want to track CSV files)
+data/*.csv
+!data/mappings.csv  # Example: Keep specific important data files
+
+# Log files
+*.log
+logs/
