@@ -14,12 +14,21 @@ public class MainContainer {
             Profile p = new ProfileImpl();
             AgentContainer container = rt.createMainContainer(p);
 
-            // Launch agents
-            container.createNewAgent("data-loader", DataLoaderAgent.class.getName(), null).start();
-            container.createNewAgent("mapper-1", DGAMapperAgent.class.getName(), new Object[]{"DTC"}).start();
+            // Launch aggregator first
             container.createNewAgent("aggregator", ResultAggregatorAgent.class.getName(), null).start();
 
-            System.out.println("All agents launched.");
+            // Launch mapper agents for each method
+            container.createNewAgent("mapper-kgm", DGAMapperAgent.class.getName(), new Object[]{"KGM"}).start();
+            container.createNewAgent("mapper-iec", DGAMapperAgent.class.getName(), new Object[]{"IEC"}).start();
+            container.createNewAgent("mapper-rrm", DGAMapperAgent.class.getName(), new Object[]{"RRM"}).start();
+            container.createNewAgent("mapper-drm", DGAMapperAgent.class.getName(), new Object[]{"DRM"}).start();
+            container.createNewAgent("mapper-dtm", DGAMapperAgent.class.getName(), new Object[]{"DTM"}).start();
+            container.createNewAgent("mapper-mi", DGAMapperAgent.class.getName(), new Object[]{"MI"}).start();
+
+            // Launch DataLoader
+            container.createNewAgent("data-loader", DataLoaderAgent.class.getName(), null).start();
+
+            System.out.println("✅ All agents launched successfully.");
         } catch (Exception e) {
             e.printStackTrace();
         }
